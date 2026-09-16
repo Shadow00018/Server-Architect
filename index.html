@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Discord Server Architect — Discord Developers</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    scroll-behavior:smooth;
+}
+
+:root{
+    --discord:#5865f2;
+    --purple:#8b5cf6;
+    --cyan:#38bdf8;
+    --bg:#05060a;
+    --card:rgba(255,255,255,.055);
+    --border:rgba(255,255,255,.1);
+    --text:#fff;
+    --muted:#9ca3af;
+}
+
+body{
+    font-family:Arial,Helvetica,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    overflow-x:hidden;
+}
+
+body::before{
+    content:"";
+    position:fixed;
+    width:500px;
+    height:500px;
+    background:var(--discord);
+    filter:blur(180px);
+    opacity:.18;
+    top:-200px;
+    left:-200px;
+    z-index:-2;
+}
+
+body::after{
+    content:"";
+    position:fixed;
+    width:500px;
+    height:500px;
+    background:var(--purple);
+    filter:blur(180px);
+    opacity:.12;
+    bottom:-200px;
+    right:-200px;
+    z-index:-2;
+}
+
+#cursorGlow{
+    position:fixed;
+    width:300px;
+    height:300px;
+    border-radius:50%;
+    background:radial-gradient(
+        circle,
+        rgba(88,101,242,.14),
+        transparent 70%
+    );
+    pointer-events:none;
+    transform:translate(-50%,-50%);
+    z-index:-1;
+}
+
+/* NAV */
+
+nav{
+    position:fixed;
+    top:20px;
+    left:50%;
+    transform:translateX(-50%);
+    width:90%;
+    max-width:1100px;
+    padding:15px 22px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:rgba(10,10,16,.75);
+    backdrop-filter:blur(20px);
+    border:1px solid var(--border);
+    border-radius:50px;
+    z-index:1000;
+}
+
+.logo{
+    font-size:17px;
+    font-weight:900;
+    letter-spacing:1px;
+}
+
+.logo span{
+    color:var(--discord);
+}
+
+.navlinks{
+    display:flex;
+    gap:25px;
+    list-style:none;
+}
+
+.navlinks a{
+    color:#aaa;
+    text-decoration:none;
+    font-size:14px;
+    transition:.3s;
+}
+
+.navlinks a:hover{
+    color:white;
+}
+
+.menu-btn{
+    display:none;
+    width:40px;
+    height:40px;
+    border:1px solid var(--border);
+    border-radius:50%;
+    background:rgba(255,255,255,.05);
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+}
+
+/* HERO */
+
+.hero{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:120px 20px 80px;
+    position:relative;
+}
+
+.hero-content{
+    max-width:950px;
+}
+
+.badge{
+    display:inline-block;
+    padding:8px 16px;
+    border:1px solid rgba(88,101,242,.5);
+    border-radius:30px;
+    background:rgba(88,101,242,.1);
+    color:#9da6ff;
+    font-size:13px;
+    margin-bottom:25px;
+}
+
+.hero h1{
+    font-size:clamp(50px,9vw,105px);
+    line-height:.95;
+    letter-spacing:-5px;
+    margin-bottom:25px;
+    background:linear-gradient(
+        120deg,
+        white 20%,
+        #8b9cff 50%,
+        #38bdf8 90%
+    );
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.hero h2{
+    font-size:clamp(20px,3vw,30px);
+    color:#ddd;
+    margin-bottom:20px;
+}
+
+.typing{
+    color:#7280ff;
+}
+
+.typing::after{
+    content:"|";
+    color:#38bdf8;
+    margin-left:3px;
+    animation:blink .7s infinite;
+}
+
+@keyframes blink{
+    50%{opacity:0}
+}
+
+.hero p{
+    max-width:700px;
+    margin:auto;
+    color:var(--muted);
+    font-size:17px;
+    line-height:1.8;
+}
+
+.hero-buttons{
+    margin-top:35px;
+    display:flex;
+    justify-content:center;
+    gap:15px;
+    flex-wrap:wrap;
+}
+
+.btn{
+    padding:14px 25px;
+    border-radius:40px;
+    text-decoration:none;
+    font-weight:bold;
+    transition:.3s;
+    display:inline-block;
+}
+
+.primary{
+    color:white;
+    background:linear-gradient(
+        90deg,
+        #4752c4,
+        var(--discord)
+    );
+    box-shadow:0 0 30px rgba(88,101,242,.3);
+}
+
+.secondary{
+    border:1px solid var(--border);
+    color:white;
+    background:rgba(255,255,255,.04);
+}
+
+.btn:hover{
+    transform:translateY(-5px);
+}
+
+/* FLOATING */
+
+.shape{
+    position:absolute;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.08);
+    pointer-events:none;
+}
+
+.shape.one{
+    width:150px;
+    height:150px;
+    top:25%;
+    left:10%;
+    animation:float 6s infinite ease-in-out;
+}
+
+.shape.two{
+    width:80px;
+    height:80px;
+    right:15%;
+    bottom:20%;
+    animation:float 5s infinite ease-in-out reverse;
+}
+
+@keyframes float{
+    50%{
+        transform:
+            translateY(-30px)
+            rotate(20deg);
+    }
+}
+
+/* SECTIONS */
+
+section{
+    padding:120px 8%;
+}
+
+.section-head{
+    text-align:center;
+    margin-bottom:60px;
+}
+
+.section-head .label{
+    color:#7280ff;
+    text-transform:uppercase;
+    letter-spacing:4px;
+    font-size:12px;
+}
+
+.section-head h2{
+    font-size:50px;
+    margin-top:10px;
+}
+
+.section-head p{
+    color:var(--muted);
+    margin-top:10px;
+}
+
+/* ABOUT */
+
+.about{
+    max-width:1050px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:1fr 1.5fr;
+    gap:40px;
+    align-items:center;
+}
+
+.about-card{
+    min-height:320px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:30px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(88,101,242,.2),
+            rgba(139,92,246,.1)
+        );
+    border:1px solid var(--border);
+    font-size:90px;
+    transition:.4s;
+}
+
+.about-card:hover{
+    transform:
+        translateY(-8px)
+        rotate(2deg);
+    border-color:rgba(88,101,242,.6);
+    box-shadow:
+        0 20px 70px
+        rgba(88,101,242,.15);
+}
+
+.about-text p{
+    color:#aaa;
+    font-size:17px;
+    line-height:1.9;
+    margin-bottom:20px;
+}
+
+.highlight{
+    color:#8994ff;
+    font-weight:bold;
+}
+
+/* SERVICES */
+
+.services{
+    max-width:1100px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:22px;
+}
+
+.service{
+    padding:30px;
+    border-radius:24px;
+    background:var(--card);
+    border:1px solid var(--border);
+    transition:.35s;
+}
+
+.service:hover{
+    transform:translateY(-8px);
+    border-color:rgba(88,101,242,.55);
+    box-shadow:
+        0 20px 60px
+        rgba(0,0,0,.35);
+}
+
+.service-icon{
+    font-size:45px;
+    margin-bottom:20px;
+}
+
+.service h3{
+    font-size:21px;
+    margin-bottom:10px;
+}
+
+.service p{
+    color:#8f96a8;
+    line-height:1.7;
+}
+
+/* PROJECTS */
+
+.projects{
+    max-width:1100px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:25px;
+}
+
+.project{
+    min-height:300px;
+    padding:30px;
+    border-radius:28px;
+    position:relative;
+    overflow:hidden;
+    border:1px solid var(--border);
+    background:var(--card);
+    transition:.4s;
+}
+
+.project:hover{
+    transform:translateY(-10px);
+    border-color:rgba(88,101,242,.5);
+    box-shadow:
+        0 20px 70px
+        rgba(0,0,0,.4);
+}
+
+.project-number{
+    color:#7280ff;
+    font-size:13px;
+    letter-spacing:3px;
+}
+
+.project-icon{
+    font-size:55px;
+    margin:40px 0 25px;
+}
+
+.project h3{
+    font-size:26px;
+    margin-bottom:10px;
+}
+
+.project p{
+    color:#999;
+    line-height:1.6;
+}
+
+/* TEAM */
+
+.team{
+    max-width:900px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:25px;
+}
+
+.member{
+    text-align:center;
+    padding:35px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:25px;
+    transition:.3s;
+}
+
+.member:hover{
+    transform:translateY(-7px);
+    border-color:var(--discord);
+}
+
+.avatar{
+    width:90px;
+    height:90px;
+    margin:0 auto 20px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:35px;
+    font-weight:bold;
+    background:linear-gradient(
+        135deg,
+        var(--discord),
+        var(--purple)
+    );
+    box-shadow:0 0 35px rgba(88,101,242,.25);
+}
+
+.member h3{
+    font-size:22px;
+    margin-bottom:7px;
+}
+
+.member p{
+    color:#888;
+}
+
+/* STATS */
+
+.stats{
+    max-width:1000px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+}
+
+.stat{
+    text-align:center;
+    padding:30px;
+    border-radius:18px;
+    background:var(--card);
+    border:1px solid var(--border);
+}
+
+.stat h3{
+    color:#7280ff;
+    font-size:35px;
+    margin-bottom:8px;
+}
+
+.stat p{
+    color:#888;
+}
+
+/* CONTACT */
+
+.contact-box{
+    max-width:800px;
+    margin:auto;
+    text-align:center;
+    padding:60px 30px;
+    border-radius:35px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(88,101,242,.15),
+            rgba(139,92,246,.08)
+        );
+    border:1px solid var(--border);
+}
+
+.contact-box h2{
+    font-size:45px;
+    margin-bottom:15px;
+}
+
+.contact-box p{
+    color:#999;
+    margin-bottom:30px;
+    line-height:1.7;
+}
+
+/* FOOTER */
+
+footer{
+    text-align:center;
+    padding:40px;
+    border-top:1px solid var(--border);
+    color:#666;
+}
+
+footer strong{
+    color:#7280ff;
+}
+
+/* REVEAL */
+
+.reveal{
+    opacity:0;
+    transform:translateY(40px);
+    transition:1s ease;
+}
+
+.reveal.active{
+    opacity:1;
+    transform:translateY(0);
+}
+
+/* MOBILE */
+
+@media(max-width:800px){
+
+    nav{
+        width:94%;
+    }
+
+    .navlinks{
+        display:none;
+        position:absolute;
+        top:65px;
+        left:0;
+        width:100%;
+        padding:20px;
+        flex-direction:column;
+        gap:18px;
+        background:rgba(10,10,16,.96);
+        border:1px solid var(--border);
+        border-radius:25px;
+        text-align:center;
+    }
+
+    .navlinks.show{
+        display:flex;
+    }
+
+    .menu-btn{
+        display:block;
+    }
+
+    .about,
+    .projects,
+    .services,
+    .team,
+    .stats{
+        grid-template-columns:1fr;
+    }
+
+    section{
+        padding:90px 6%;
+    }
+
+    .section-head h2{
+        font-size:38px;
+    }
+
+    .hero h1{
+        letter-spacing:-3px;
+    }
+
+    .contact-box h2{
+        font-size:35px;
+    }
+}
+
+@media(max-width:450px){
+
+    .hero h1{
+        font-size:52px;
+    }
+
+    .hero-buttons{
+        flex-direction:column;
+        align-items:center;
+    }
+
+    .btn{
+        width:100%;
+        max-width:280px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="cursorGlow"></div>
+
+<!-- NAVIGATION -->
+
+<nav>
+
+    <div class="logo">
+        DISCORD <span>ARCHITECT</span>
+    </div>
+
+    <ul class="navlinks" id="navlinks">
+
+        <li><a href="#home">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#team">Team</a></li>
+        <li><a href="#contact">Contact</a></li>
+
+    </ul>
+
+    <button class="menu-btn" id="menuBtn">
+        ☰
+    </button>
+
+</nav>
+
+
+<!-- HERO -->
+
+<section class="hero" id="home">
+
+    <div class="shape one"></div>
+    <div class="shape two"></div>
+
+    <div class="hero-content reveal">
+
+        <div class="badge">
+            ✦ DISCORD SERVER ARCHITECTS
+        </div>
+
+        <h1>
+            BUILD.
+            <br>
+            MANAGE.
+            <br>
+            <span style="color:#7280ff">
+                DOMINATE.
+            </span>
+        </h1>
+
+        <h2>
+            We build
+            <span class="typing" id="typing">
+                Discord Servers
+            </span>
+        </h2>
+
+        <p>
+            We are two developers and Discord server architects
+            creating professional communities, custom bots,
+            automation systems and powerful server experiences.
+        </p>
+
+        <div class="hero-buttons">
+
+            <!-- CHANGE THIS TO YOUR DISCORD INVITE -->
+
+            <a
+                href="https://discord.com"
+                target="_blank"
+                class="btn primary">
+
+                Join Our Discord →
+
+            </a>
+
+            <a
+                href="#projects"
+                class="btn secondary">
+
+                View Our Work
+
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ABOUT -->
+
+<section id="about">
+
+    <div class="section-head reveal">
+
+        <div class="label">
+            Who We Are
+        </div>
+
+        <h2>
+            Discord
+            <span style="color:#7280ff">
+                Architects
+            </span>
+        </h2>
+
+        <p>
+            We turn empty servers into active communities.
+        </p>
+
+    </div>
+
+
+    <div class="about reveal">
+
+        <div class="about-card">
+            💜
+        </div>
+
+        <div class="about-text">
+
+            <p>
+                We are two brothers who love
+                <span class="highlight">
+                    Discord development and community building.
+                </span>
+            </p>
+
+            <p>
+                We design professional server structures,
+                create custom bots, build moderation systems
+                and automate repetitive tasks.
+            </p>
+
+            <p>
+                Our goal is simple:
+                <span class="highlight">
+                    create Discord communities that look great,
+                    work smoothly and are easy to manage.
+                </span>
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- SERVICES -->
+
+<section id="services">
+
+    <div class="section-head reveal">
+
+        <div class="label">
+            What We Do
+        </div>
+
+        <h2>
+            Our
+            <span style="color:#7280ff">
+                Services
+            </span>
+        </h2>
+
+        <p>
+            Everything your Discord community needs.
+        </p>
+
+    </div>
+
+
+    <div class="services">
+
+        <div class="service reveal">
+
+            <div class="service-icon">
+                🏗️
+            </div>
+
+            <h3>
+                Server Architecture
+            </h3>
+
+            <p>
+                Professional channels, categories, roles and
+                permissions designed around your community.
+            </p>
+
+        </div>
+
+
+        <div class="service reveal">
+
+            <div class="service-icon">
+                🤖
+            </div>
+
+            <h3>
+                Custom Discord Bots
+            </h3>
+
+            <p>
+                Custom bots with moderation, tickets, logging,
+                welcome systems and other features.
+            </p>
+
+        </div>
+
+
+        <div class="service reveal">
+
+            <div class="service-icon">
+                ⚡
+            </div>
+
+            <h3>
+                Automation
+            </h3>
+
+            <p>
+                Automate server management, roles, messages,
+                tickets, logs and community workflows.
+            </p>
+
+        </div>
+
+
+        <div class="service reveal">
+
+            <div class="service-icon">
+                🛡️
+            </div>
+
+            <h3>
+                Server Security
+            </h3>
+
+            <p>
+                Moderation tools, logging and protection systems
+                to help keep your community organized.
+            </p>
+
+        </div>
+
+
+        <div class="service reveal">
+
+            <div class="service-icon">
+                🎨
+            </div>
+
+            <h3>
+                Server Branding
+            </h3>
+
+            <p>
+                Custom server identity, emojis, banners,
+                icons and visual layouts.
+            </p>
+
+        </div>
+
+
+        <div class="service reveal">
+
+            <div class="service-icon">
+                ⚙️
+            </div>
+
+            <h3>
+                Community Systems
+            </h3>
+
+            <p>
+                Tickets, applications, verification,
+                reaction roles and custom community systems.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- PROJECTS -->
+
+<section id="projects">
+
+    <div class="section-head reveal">
+
+        <div class="label">
+            Our Work
+        </div>
+
+        <h2>
+            Featured
+            <span style="color:#7280ff">
+                Projects
+            </span>
+        </h2>
+
+        <p>
+            Replace these with your real Discord projects.
+        </p>
+
+    </div>
+
+
+    <div class="projects">
+
+        <div class="project reveal">
+
+            <div class="project-number">
+                01 / SERVER
+            </div>
+
+            <div class="project-icon">
+                🏙️
+            </div>
+
+            <h3>
+                Community Server
+            </h3>
+
+            <p>
+                A fully structured community server with
+                verification, moderation, tickets, roles and
+                custom automation.
+            </p>
+
+        </div>
+
+
+        <div class="project reveal">
+
+            <div class="project-number">
+                02 / BOT
+            </div>
+
+            <div class="project-icon">
+                🤖
+            </div>
+
+            <h3>
+                Custom Bot
+            </h3>
+
+            <p>
+                A custom Discord bot built for moderation,
+                logging, tickets, commands and community tools.
+            </p>
+
+        </div>
+
+
+        <div class="project reveal">
+
+            <div class="project-number">
+                03 / SECURITY
+            </div>
+
+            <div class="project-icon">
+                🛡️
+            </div>
+
+            <h3>
+                Security System
+            </h3>
+
+            <p>
+                Automated moderation and logging systems designed
+                to help server staff manage their community.
+            </p>
+
+        </div>
+
+
+        <div class="project reveal">
+
+            <div class="project-number">
+                04 / AUTOMATION
+            </div>
+
+            <div class="project-icon">
+                ⚡
+            </div>
+
+            <h3>
+                Server Automation
+            </h3>
+
+            <p>
+                Automated roles, welcome messages, tickets,
+                applications and other community workflows.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- TEAM -->
+
+<section id="team">
+
+    <div class="section-head reveal">
+
+        <div class="label">
+            The Team
+        </div>
+
+        <h2>
+            Two Developers.
+            <span style="color:#7280ff">
+                One Team.
+            </span>
+        </h2>
+
+        <p>
+            Add your names and Discord usernames below.
+        </p>
+
+    </div>
+
+
+    <div class="team">
+
+        <div class="member reveal">
+
+            <div class="avatar">
+                Y
+            </div>
+
+            <!-- CHANGE YOUR NAME -->
+
+            <h3>
+                Shadow
+            </h3>
+
+            <p>
+                Discord Developer • Bot Developer
+            </p>
+
+        </div>
+
+
+        <div class="member reveal">
+
+            <div class="avatar">
+                B
+            </div>
+
+            <!-- CHANGE YOUR BROTHER'S NAME -->
+
+            <h3>
+                EZ GAMER
+            </h3>
+
+            <p>
+                Discord Developer • Server Architect
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- STATS -->
+
+<section>
+
+    <div class="stats">
+
+        <div class="stat reveal">
+
+            <h3>
+                10+
+            </h3>
+
+            <p>
+                Servers Built
+            </p>
+
+        </div>
+
+
+        <div class="stat reveal">
+
+            <h3>
+                20+
+            </h3>
+
+            <p>
+                Bots & Systems
+            </p>
+
+        </div>
+
+
+        <div class="stat reveal">
+
+            <h3>
+                24/7
+            </h3>
+
+            <p>
+                Development
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- CONTACT -->
+
+<section id="contact">
+
+    <div class="contact-box reveal">
+
+        <div class="section-head">
+
+            <div class="label">
+                Get In Touch
+            </div>
+
+            <h2>
+                Build Your
+                <span style="color:#7280ff">
+                    Server
+                </span>
+            </h2>
+
+        </div>
+
+        <p>
+            Need a professional Discord server, custom bot
+            or automation system? Let's build it together.
+        </p>
+
+        <div class="hero-buttons">
+
+            <!-- PUT YOUR DISCORD INVITE HERE -->
+
+            <a
+                href="https://discord.com"
+                target="_blank"
+                class="btn primary">
+
+                💬 Contact Us on Discord
+
+            </a>
+
+
+
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- FOOTER -->
+
+<footer>
+
+    <p>
+        Built by
+        <strong>
+            Discord Server Architect
+        </strong>
+    </p>
+
+    <br>
+
+    <p>
+        © 2026 — All Rights Reserved
+    </p>
+
+</footer>
+
+
+<script>
+
+/* MOUSE GLOW */
+
+const glow =
+    document.getElementById("cursorGlow");
+
+document.addEventListener(
+    "mousemove",
+    e => {
+
+        glow.style.left =
+            e.clientX + "px";
+
+        glow.style.top =
+            e.clientY + "px";
+
+    }
+);
+
+
+/* TYPING */
+
+const words = [
+    "Discord Servers",
+    "Custom Bots",
+    "Communities",
+    "Automation",
+    "Server Systems"
+];
+
+let wordIndex = 0;
+let charIndex = 0;
+let deleting = false;
+
+const typing =
+    document.getElementById("typing");
+
+
+function typeEffect(){
+
+    const word =
+        words[wordIndex];
+
+    if(!deleting){
+
+        typing.textContent =
+            word.substring(
+                0,
+                charIndex + 1
+            );
+
+        charIndex++;
+
+        if(charIndex === word.length){
+
+            deleting = true;
+
+            setTimeout(
+                typeEffect,
+                1200
+            );
+
+            return;
+        }
+
+    }else{
+
+        typing.textContent =
+            word.substring(
+                0,
+                charIndex - 1
+            );
+
+        charIndex--;
+
+        if(charIndex === 0){
+
+            deleting = false;
+
+            wordIndex =
+                (wordIndex + 1)
+                % words.length;
+
+        }
+    }
+
+    setTimeout(
+        typeEffect,
+        deleting ? 55 : 100
+    );
+}
+
+typeEffect();
+
+
+/* SCROLL REVEAL */
+
+const reveals =
+    document.querySelectorAll(".reveal");
+
+
+function revealOnScroll(){
+
+    reveals.forEach(element => {
+
+        const position =
+            element
+            .getBoundingClientRect()
+            .top;
+
+        if(
+            position <
+            window.innerHeight - 100
+        ){
+
+            element.classList.add(
+                "active"
+            );
+
+        }
+
+    });
+}
+
+window.addEventListener(
+    "scroll",
+    revealOnScroll
+);
+
+revealOnScroll();
+
+
+/* MOBILE MENU */
+
+const menuBtn =
+    document.getElementById("menuBtn");
+
+const navlinks =
+    document.getElementById("navlinks");
+
+
+menuBtn.addEventListener(
+    "click",
+    () => {
+
+        navlinks.classList.toggle("show");
+
+        menuBtn.textContent =
+            navlinks.classList.contains("show")
+            ? "✕"
+            : "☰";
+
+    }
+);
+
+
+/* CLOSE MENU */
+
+document.querySelectorAll(
+    ".navlinks a"
+).forEach(link => {
+
+    link.addEventListener(
+        "click",
+        () => {
+
+            navlinks.classList.remove(
+                "show"
+            );
+
+            menuBtn.textContent = "☰";
+
+        }
+    );
+
+});
+
+</script>
+
+</body>
+</html>
